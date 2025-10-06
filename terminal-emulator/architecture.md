@@ -12,7 +12,7 @@
 
 - `IO` - превращает текст в готовую к исполнению команду, вызывает все остальные модули. Публичный интерфейс:
 
-    - `def parse_command() -> bool` - Читает `stdin`. После превращения входного потока в некоторую осмысленную команду она передаётся в другие модули. Если этот метод возвращает `False`, то завершаем выполнение программы.
+  - `def parse_command() -> bool` - Читает `stdin`. После превращения входного потока в некоторую осмысленную команду она передаётся в другие модули. Если этот метод возвращает `False`, то завершаем выполнение программы.
 
   Для всех токенов, кроме названия программ и имён переменных применяется `Context.populate_values`, если они находятся в двойных ковычках или `Context.get_value`, если кавычек нет и токен начинается с `$`. Если в конце строки находится символ `\`, то текущая команда продолжается на следующей строчке.
 
@@ -29,35 +29,124 @@
 
 - `Context` - модуль хранения переменных окружения. `IO` модуль передаёт `Context` переменные окружения в том же порядке, в котором их передал пользователь. Важно, что для передачи переменных есть два метода `scoped` и `unscoped`, переменные переданные через `scoped` метод живут только до вызова `exit_scope`, а `unscoped` переменные считаются глобальными и могуть быть перезаписаны, но не удалены. Публичный интерфейс:
 
-    - `def add_unscoped_param(name: str, value: str) -> None`
-    - `def add_scoped_param(name: str, value: str) -> None`
-    - `def exit_scope() -> None`
-    - `def get_env() -> dict[str, str]` - возвращает словать из всех `scoped` и `unscoped` переменных. `scoped` переменные пишутся поверх `unscoped` переменных в случае конфликта имён.
-    - `def get_value(name: str) -> str` - возвращает значение по имени `name`
-    - `def populate_values(template: str) -> str` - находит все вхождения оператора `...${<var_name>}...` в строке и заменяет из на значение переменных с соотвествующим именем.
+  - `def add_unscoped_param(name: str, value: str) -> None`
+  - `def add_scoped_param(name: str, value: str) -> None`
+  - `def exit_scope() -> None`
+  - `def get_env() -> dict[str, str]` - возвращает словать из всех `scoped` и `unscoped` переменных. `scoped` переменные пишутся поверх `unscoped` переменных в случае конфликта имён.
+  - `def get_value(name: str) -> str` - возвращает значение по имени `name`
+  - `def populate_values(template: str) -> str` - находит все вхождения оператора `...${<var_name>}...` в строке и заменяет из на значение переменных с соотвествующим именем.
 
   **`IO` модуль передаёт переменные, ПОСЛЕ вызова `get_value` или `populate_values` на значении**
 
 - `Executor` - модуль выполнения, для каждой команды вызывает `subprocesses.run`, если количество команд `k > 1` перенаправляет вывод команды `i` на ввод команды `i + 1` для всех `i in range(k)`. Это выполняется для всех команд, кроме тех у которых имя совпадает с одной из встроенных команд, тогда вместо `subprocesses` будет вызван соответствующий метод `Builtin`. Публичный интерфейс:
 
-    - `def execute_pipeline(env: dict[str, str], commands: list[Command])`
+  - `def execute_pipeline(env: dict[str, str], commands: list[Command])`
 
   Первая команда читает из `stdin`, последняя команда выводит в `stdout`.
 
 - `Buildin` - модель встроенных команд, команды имеют следующий интерфейс:
-    
-    ```
-    def <command_name>(
-        in: io.TextIOBase,
-        out: io.TextIOBase,
-        *args: list[str],
-        **kwargs: dict[str, str],
-    ) -> None
-    ```
 
-    Если вызвана команда `exit` нужно бросить специально исключение `ExitException`, которое обработает `IO` и завершит исполнение.
+  ```
+  def <command_name>(
+      in: io.TextIOBase,
+      out: io.TextIOBase,
+      *args: list[str],
+      **kwargs: dict[str, str],
+  ) -> None
+  ```
+
+  Если вызвана команда `exit` нужно бросить специально исключение `ExitException`, которое обработает `IO` и завершит исполнение.
 
 ### Схема
+
+                  pipe0                 pipe1
+               ┌─────────┐          ┌─────────┐
+    read end ─▶│   r0    │          │   r1    │◀─ read end
+    write end ◀│   w0    │          │   w1    │─▶ write end
+               └─────────┘          └─────────┘
+
+Child 0 (cmd0):
+
+```
+  STDIN  ← in.txt         (dup2(fd_in, STDIN))
+  STDOUT → pipe0.w (w0)   (dup2(w0, STDOUT))
+  close: r0,w0,r1,w1,fd_in
+  execvp(cmd0)
+```
+
+Child 1 (cmd1):
+
+```
+  STDIN  ← pipe0.r (r0)   (dup2(r0, STDIN))
+  STDOUT → pipe1.w (w1)   (dup2(w1, STDOUT))
+  close: r0,w0,r1,w1
+  execvp(cmd1)
+```
+
+Child 2 (cmd2):
+
+```
+  STDIN  ← pipe1.r (r1)   (dup2(r1, STDIN))
+  STDOUT → out.txt        (dup2(fd_out, STDOUT))
+  close: r0,w0,r1,w1,fd_out
+  execvp(cmd2)
+```
+
+Parent:
+после форков закрыть все `r0,w0,r1,w1`
+затем `waitpid` по всем детям
+
+### Пример
+
+`cat < in.txt | grep foo | sort > out.txt`
+
+парсинг:
+
+```
+[
+  Command { command: ["cat"],        stdin:  Some("in.txt"),  stdout: None      },
+  Command { command: ["grep","foo"], stdin:  None,            stdout: None      },
+  Command { command: ["sort"],       stdin:  None,            stdout: Some("out.txt") },
+]
+```
+
+сводка системных вызовов:
+
+```
+pipe() -> (r0,w0)
+pipe() -> (r1,w1)
+
+fork()  # Child 0: cat
+  Child0:
+    dup2(w0, 1)                      # stdout -> pipe0.w
+    close(r0); close(w0); close(r1); close(w1)
+    fd_in = open("in.txt", O_RDONLY)
+    dup2(fd_in, 0); close(fd_in)     # stdin  <- in.txt
+    execvp("cat", ["cat"])
+
+fork()  # Child 1: grep foo
+  Child1:
+    dup2(r0, 0)                      # stdin  <- pipe0.r
+    dup2(w1, 1)                      # stdout -> pipe1.w
+    close(r0); close(w0); close(r1); close(w1)
+    execvp("grep", ["grep","foo"])
+
+fork()  # Child 2: sort
+  Child2:
+    dup2(r1, 0)                      # stdin  <- pipe1.r
+    close(r0); close(w0); close(r1); close(w1)
+    fd_out = open("out.txt", O_WRONLY|O_CREAT|O_TRUNC, 0644)
+    dup2(fd_out, 1); close(fd_out)   # stdout -> out.txt
+    execvp("sort", ["sort"])
+
+Parent:
+  close(r0); close(w0); close(r1); close(w1)
+  waitpid(child0); waitpid(child1); waitpid(child2)
+```
+
+поток данных:
+
+`in.txt --(FD0)--> [cat] --pipe0--> [grep foo] --pipe1--> [sort] --(FD1)--> out.txt`
 
 ### Диаграмма классов
 
@@ -106,4 +195,3 @@ classDiagram
     Executor --> Builtin : uses
     Executor --> Command : processes
 ```
-#### TODO
