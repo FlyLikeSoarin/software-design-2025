@@ -1,5 +1,4 @@
 import src.io as terminal_io
-import src.models as models
 
 
 def test_tokenize():
