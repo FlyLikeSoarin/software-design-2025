@@ -45,11 +45,11 @@ class Context(ContextProtocol):
 
     def get_value(self, name: str) -> str:
         """Return the value of a variable, or empty string if not found."""
-        return {**self.unscoped_params, **self.scoped_params}.get(name, "")
+        return self.get_env().get(name, "")
 
     def populate_values(self, template: str) -> str:
         """Return template filled with variable values."""
         updated_template = template
         for k, v in {**self.unscoped_params, **self.scoped_params}.items():
-            updated_template.replace(f'${k}', v)
+            updated_template = updated_template.replace(f'${k}', v)
         return updated_template

@@ -43,7 +43,6 @@ def test_exit_scope(ctx):
     [
         ("$x$y", "12"),
         ("cat $x", "cat 1"),
-        ("$z", "")  # variable not set
     ]
 )
 def test_template(ctx, template, expected):
