@@ -1,6 +1,6 @@
 .PHONY: test
 test:
-	PYTHONPATH=. python -m pytest tests
+	PYTHONPATH=. python -m pytest -vv tests
 
 .PHONY: lint
 lint:
