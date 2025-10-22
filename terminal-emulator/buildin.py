@@ -36,16 +36,14 @@ class Builtin:
         :param input: входной поток для чтения данных
         :param out: выходной поток для записи результатов
         :param args: имена файлов для обработки
+        :raises FileNotFoundError: если файл не найден
         """
         if not args:
             out.write(input.read())
         else:
             for filename in args:
-                try:
-                    with open(filename, 'r') as f:
-                        out.write(f.read())
-                except FileNotFoundError:
-                    sys.stderr.write(f"cat: {filename}: No such file or directory\n")
+                with open(filename, 'r') as f:
+                    out.write(f.read())
 
     @staticmethod
     def echo(input: TextIOBase, out: TextIOBase, *args, **kwargs) -> None:
@@ -67,6 +65,7 @@ class Builtin:
         :param input: входной поток для анализа
         :param out: выходной поток для записи статистики
         :param args: имена файлов для анализа
+        :raises FileNotFoundError: если файл не найден
         """
 
         def count_stats(text):
@@ -83,19 +82,18 @@ class Builtin:
         else:
             total_lines, total_words, total_bytes = 0, 0, 0
             for filename in args:
-                try:
-                    with open(filename, 'r') as f:
-                        text = f.read()
-                        lines, words, bytes_count = count_stats(text)
-                        total_lines += lines
-                        total_words += words
-                        total_bytes += bytes_count
-                        out.write(f"{lines} {words} {bytes_count} {filename}\n")
-                except FileNotFoundError:
-                    sys.stderr.write(f"wc: {filename}: No such file or directory\n")
+                with open(filename, 'r') as f:
+                    text = f.read()
+                    lines, words, bytes_count = count_stats(text)
+                    total_lines += lines
+                    total_words += words
+                    total_bytes += bytes_count
+                    out.write(f"{lines} {words} {bytes_count} {filename}\n")
 
             if len(args) > 1:
                 out.write(f"{total_lines} {total_words} {total_bytes} total\n")
+
+
 
     @staticmethod
     def pwd(input: TextIOBase, out: TextIOBase, *args, **kwargs) -> None:
