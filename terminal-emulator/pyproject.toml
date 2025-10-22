@@ -1,0 +1,23 @@
+[project]
+name = "terminal-emulator"
+version = "0.1.0"
+description = "Homework 1 on software design course at ITMO university"
+authors = [
+    {name = "Eugene Vihrev",email = "evgeny.vihrev@gmail.com"}
+]
+license = {text = "MIT"}
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+]
+
+[dependency-groups]
+dev = [
+    "pytest (>=8.4.2,<9.0.0)",
+    "ruff (>=0.14.1,<0.15.0)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
