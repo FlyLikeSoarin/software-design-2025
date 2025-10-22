@@ -28,7 +28,9 @@ jobs:
         run: poetry install --no-root
 
       - name: Run linter
+        working-directory: terminal-emulator
         run: make lint
 
       - name: Run tests
+        working-directory: terminal-emulator
         run: make test
