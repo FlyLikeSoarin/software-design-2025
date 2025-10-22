@@ -1,5 +1,4 @@
 import abc
-import itertools
 import re
 
 import src.context as context_lib
@@ -28,24 +27,27 @@ class IO(IOProtocol):
             self.token_pattern,
         ]
 
-        self.defenition_matcher = re.compile(r"(?P<key>[a-zA-Z_]+[a-zA-Z0-9_]*)=(?P<value>[a-zA-Z0-9_]+)")
+        self.defenition_matcher = re.compile(r"(?P<key>[a-zA-Z_]+[a-zA-Z0-9_]*)=(?P<value>[^\s]+)")
 
     def read_command(self) -> str:
         """ Read command until line does not end with \\"""
         command = ""
         while True:
-            snippet = input()
+            snippet = input().strip()
             command += snippet
-            if snippet.strip().endswith("\\"):
+            if snippet.endswith("\\"):
+                command = command[:-1]
                 continue
             return command
     
     def tokenize(self, patterns: list[re.Pattern], command) -> list[str]:
         pattern, *next_patterns = patterns
         if next_patterns:
-            recurse = lambda s: self.tokenize(next_patterns, s)
+            def recurse(s: str) -> list[str]:
+                return self.tokenize(next_patterns, s)
         else:
-            recurse = lambda _: []
+            def recurse(_: str) -> list[str]:
+                return []
         tail: str = command
         tokens = []
         while tail:
@@ -103,6 +105,11 @@ class IO(IOProtocol):
 
     def parse_command(self) -> bool:
         raw_command = self.read_command()
+
+        # TODO: Remove this if after merging BUILDINS
+        if raw_command == "exit":
+            return False
+    
         tokens = self.tokenize(self.pattern_pipeline, raw_command)
         env, tokens = self.consume_defenitions(tokens)
         for k, v in env.items():
@@ -121,3 +128,5 @@ class IO(IOProtocol):
         self.executor.execute_pipeline(self.context.get_env(), commands)
 
         self.context.exit_scope()
+        
+        return True
