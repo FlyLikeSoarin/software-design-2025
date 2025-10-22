@@ -25,7 +25,15 @@
       kwargs: dict[str, str]
   ```
 
-  Которые передаются в `Executor` вместе с `Context.get_env()`
+  Которые передаются в `Executor` вместе с `Context.get_env()`, в ответ он вернёт `Status`:
+
+  ```
+  class Status:
+    code: int  # Return code of last command or first command that failed
+    index: int  # Index of command which return code is written above
+  ```
+
+  где `code` - код выхода последней команды, если все команды выполнитись успешно, или код выхода первой команды вернувшей ошибку иначе. `index` - индека команды, чей код ответа записан в `code`.
 
 - `Context` - модуль хранения переменных окружения. `IO` модуль передаёт `Context` переменные окружения в том же порядке, в котором их передал пользователь. Важно, что для передачи переменных есть два метода `scoped` и `unscoped`, переменные переданные через `scoped` метод живут только до вызова `exit_scope`, а `unscoped` переменные считаются глобальными и могуть быть перезаписаны, но не удалены. Публичный интерфейс:
 
@@ -40,7 +48,7 @@
 
 - `Executor` - модуль выполнения, для каждой команды вызывает `subprocesses.run`, если количество команд `k > 1` перенаправляет вывод команды `i` на ввод команды `i + 1` для всех `i in range(k)`. Это выполняется для всех команд, кроме тех у которых имя совпадает с одной из встроенных команд, тогда вместо `subprocesses` будет вызван соответствующий метод `Builtin`. Публичный интерфейс:
 
-  - `def execute_pipeline(env: dict[str, str], commands: list[Command])`
+  - `def execute_pipeline(env: dict[str, str], commands: list[Command]) -> Status`
 
   Первая команда читает из `stdin`, последняя команда выводит в `stdout`.
 
@@ -48,14 +56,14 @@
 
   ```
   def <command_name>(
-      in: io.TextIOBase,
-      out: io.TextIOBase,
+      in_io: io.TextIOBase,
+      out_io: io.TextIOBase,
       *args: list[str],
       **kwargs: dict[str, str],
-  ) -> None
+  ) -> int
   ```
 
-  Если вызвана команда `exit` нужно бросить специально исключение `ExitException`, которое обработает `IO` и завершит исполнение.
+  Команды возвращают код выхода, 0 - если всё прошло успешно, любой другой, если была ошибка. Если вызвана команда `exit` нужно бросить специально исключение `ExitException`, которое обработает `IO` и завершит исполнение.
 
 ### Схема
 
