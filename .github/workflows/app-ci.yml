@@ -25,7 +25,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: terminal-emulator
-        run: poetry install
+        run: poetry install --no-root
 
       - name: Run linter
         run: make lint
