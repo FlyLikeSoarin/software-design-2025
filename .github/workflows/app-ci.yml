@@ -2,7 +2,6 @@ name: CLI application
 
 on:
   push:
-  pull_request:
 
 permissions:
   contents: read
@@ -21,9 +20,11 @@ jobs:
           python-version: 3.11
 
       - name: Install Poetry
+        working-directory: terminal-emulator
         run: pip install poetry
 
       - name: Install dependencies
+        working-directory: terminal-emulator
         run: poetry install
 
       - name: Run linter
