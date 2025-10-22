@@ -1,8 +1,4 @@
 class Command:
-    def __init__(self):
-        self.args = []
-        self.kwargs = {}
-
     name: str
     args: list[str]
     kwargs: dict[str, str]
