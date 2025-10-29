@@ -1,0 +1,36 @@
+name: CLI application
+
+on:
+  push:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+
+      - name: Install Poetry
+        working-directory: terminal-emulator
+        run: pip install poetry
+
+      - name: Install dependencies
+        working-directory: terminal-emulator
+        run: poetry install --no-root
+
+      - name: Run linter
+        working-directory: terminal-emulator
+        run: poetry run make lint
+
+      - name: Run tests
+        working-directory: terminal-emulator
+        run: poetry run make test
