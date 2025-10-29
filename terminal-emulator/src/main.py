@@ -7,5 +7,5 @@ context = context.Context()
 executor = executor.Executor()
 io = io.IO(context, executor)
 
-while True:
-    io.parse_command()
+while io.parse_command():
+    pass

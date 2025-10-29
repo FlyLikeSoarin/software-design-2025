@@ -51,5 +51,5 @@ class Context(ContextProtocol):
         """Return template filled with variable values."""
         updated_template = template
         for k, v in {**self.unscoped_params, **self.scoped_params}.items():
-            updated_template = updated_template.replace(f'${k}', v)
+            updated_template = updated_template.replace(f'${{{k}}}', v)
         return updated_template
