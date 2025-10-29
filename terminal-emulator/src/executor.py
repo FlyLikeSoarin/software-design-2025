@@ -19,18 +19,23 @@ class Executor(ExecutorProtocol):
                 kwargs = {"stdin": sys.stdin}
             else:
                 kwargs = {"input": previous_stdout}
-            
-            result = subprocess.run(
-                [command.name, *command.args, *itertools.chain([(f"--{k}", v) for k, v in command.kwargs])],
-                env=env,
-                capture_output=True,
-                **kwargs,
-            )
+            try:
+                result = subprocess.run(
+                    [command.name, *command.args, *itertools.chain([(f"--{k}", v) for k, v in command.kwargs])],
+                    env=env,
+                    capture_output=True,
+                    **kwargs,
+                )
+            except FileNotFoundError:
+                print(f"Command {command.name} not found")
+                return
 
             previous_stdout = result.stdout
+            previous_stderr = result.stderr
 
             if result.returncode != 0:
                 status = models.Status()
                 status.index, status.code = index, result.returncode
+                print(previous_stderr.decode())
                 return status
         print(previous_stdout.decode())

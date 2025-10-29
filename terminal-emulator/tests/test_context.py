@@ -41,8 +41,8 @@ def test_exit_scope(ctx):
 @pytest.mark.parametrize(
     'template,expected',
     [
-        ("$x$y", "12"),
-        ("cat $x", "cat 1"),
+        ("${x}${y}", "12"),
+        ("cat ${x}", "cat 1"),
     ]
 )
 def test_template(ctx, template, expected):
