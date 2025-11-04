@@ -1,0 +1,70 @@
+@startuml
+!pragma usecase noSeparator
+skinparam shadowing false
+skinparam dpi 150
+skinparam activity {
+  StartColor #35a
+  BarColor #666
+  DiamondBackgroundColor #eee
+  DiamondBorderColor #888
+}
+
+|QC / Инспектор|
+start
+:Выявить дефект на испытаниях или участке;
+:Снять авто с конвейера (при необходимости);
+:Ввести данные дефекта\n(номер авто, стадия, место, причина, фото);
+|System|
+:Создать запись Defect(status=New);
+:Определить доступные зоны и места ремонта;
+|Диспетчер|
+if (Свободная зона есть?) then (да)
+  :Назначить ремонтную зону и место;
+else (нет)
+  :Поставить авто в очередь;\nОповестить бригадиров;
+  |System|
+  :Defect(status=Queued);
+endif
+:Создать RepairTask(status=Planned);
+
+|Бригадир|
+if (Доступен ремонтник?) then (да)
+  :Назначить исполнителя;
+else (нет)
+  |Ремонтник|
+  :Отметить доступность в начале смены;
+  |Бригадир|
+  :Назначить исполнителя;
+endif
+|System|
+:RepairTask.assignedTo = Technician;
+
+|Ремонтник|
+:Принять задание;
+|System|
+:RepairTask(status=InProgress);\nstartTime зафиксирован;
+|Ремонтник|
+:Выполнить ремонт;\nПри необходимости добавить фото;
+|System|
+:Обновить RepairTask и вложения;
+|Ремонтник|
+:Завершить ремонт;
+|System|
+:RepairTask(status=Finished);\nendTime зафиксирован;\nDefect(status=FixedPendingQC);
+
+|QC / Инспектор|
+:Провести повторные испытания;
+if (Испытания успешны?) then (да)
+  |System|
+  :QCTest(result=Pass);\nDefect(status=Closed);\nАвто возвращено в поток;
+  stop
+else (нет)
+  |System|
+  :QCTest(result=Fail);\nDefect(status=Reopened);
+  |Бригадир|
+  :Переназначить ремонтнику или зоне;
+  |Ремонтник|
+  :Повторный ремонт;
+  -[#666]-> back to "Принять задание";
+endif
+@enduml

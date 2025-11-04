@@ -1,0 +1,81 @@
+@startuml
+left to right direction
+skinparam shadowing false
+skinparam wrapWidth 220
+skinparam dpi 150
+
+actor "Диспетчер" as Dispatcher
+actor "Бригадир" as Foreman
+actor "Ремонтник" as Technician
+actor "ОТК (QC)" as QC
+actor "Начальник цеха" as ShopHead
+actor "Бухгалтерия" as Accounting
+actor "Администратор системы" as Admin
+actor "ERP/MES" as MES
+
+rectangle "Система учёта дефектов" as System {
+  usecase UC_RegisterDefect as "Зарегистрировать дефект"
+  usecase UC_Diagnosis as "Первичная диагностика"
+  usecase UC_Route as "Направить авто в\nремонтную зону"
+  usecase UC_ViewCapacity as "Видеть занятость зон\nи ремонтных мест"
+  usecase UC_Assign as "Назначить ремонт\nконкретному рабочему"
+  usecase UC_CheckIn as "Отметить доступность\nв начале смены"
+  usecase UC_StartRepair as "Начать/завершить ремонт\n(время, место, исполнитель)"
+  usecase UC_QCTests as "Зафиксировать результаты\nстендовых и ходовых испытаний"
+  usecase UC_QCShiftReport as "Сменный отчёт для ОТК"
+  usecase UC_ShopHeadReport as "Сменный отчёт для\nначальника цеха"
+  usecase UC_CrewReport as "Сменный отчёт по бригаде"
+  usecase UC_Attendance as "Месячный отчёт по\nотработанным сменам"
+  usecase UC_ManageRef as "Вести справочники:\nзоны, места, бригады, бригадиры"
+  usecase UC_Search as "Поиск и фильтрация\nдефектов/ремонтов"
+  usecase UC_Attach as "Прикрепить фото/файлы"
+  usecase UC_Notifications as "Уведомления о событиях"
+  usecase UC_Auth as "Аутентификация и роли (RBAC)"
+}
+
+' --- Связи акторов с вариантами использования ---
+Dispatcher --> UC_ViewCapacity
+Dispatcher --> UC_Route
+Dispatcher --> UC_Search
+Dispatcher --> UC_Auth
+
+Foreman --> UC_Assign
+Foreman --> UC_CrewReport
+Foreman --> UC_ViewCapacity
+Foreman --> UC_Search
+Foreman --> UC_Auth
+
+Technician --> UC_CheckIn
+Technician --> UC_Diagnosis
+Technician --> UC_StartRepair
+Technician --> UC_Attach
+Technician --> UC_Auth
+
+QC --> UC_RegisterDefect
+QC --> UC_QCTests
+QC --> UC_QCShiftReport
+QC --> UC_Search
+QC --> UC_Auth
+
+ShopHead --> UC_ShopHeadReport
+ShopHead --> UC_Auth
+
+Accounting --> UC_Attendance
+Accounting --> UC_Auth
+
+Admin --> UC_ManageRef
+Admin --> UC_Auth
+
+' --- Интеграции/влияние внешних систем ---
+MES --> UC_RegisterDefect : "данные заказа/плана\n(контекст авто)"
+
+' --- include / extend отношения ---
+UC_Assign ..> UC_ViewCapacity : <<include>>
+UC_StartRepair ..> UC_Attach : <<include>>
+UC_RegisterDefect ..> UC_Attach : <<include>>
+UC_QCShiftReport ..> UC_QCTests : <<include>>
+UC_ShopHeadReport ..> UC_StartRepair : <<include>>
+UC_CrewReport ..> UC_StartRepair : <<include>>
+UC_Attendance ..> UC_CheckIn : <<include>>
+
+@enduml
