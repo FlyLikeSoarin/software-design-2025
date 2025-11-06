@@ -2,21 +2,27 @@ import abc
 
 
 class ContextProtocol(abc.ABC):
+    @abc.abstractmethod
     def add_unscoped_param(self, name: str, value: str) -> None:
         ...
 
+    @abc.abstractmethod
     def add_scoped_param(self, name: str, value: str) -> None:
         ...
 
+    @abc.abstractmethod
     def exit_scope(self) -> None:
         ...
     
+    @abc.abstractmethod
     def get_env(self) -> dict[str, str]:
         ...
     
+    @abc.abstractmethod
     def get_value(self, name: str) -> str:
         ...
 
+    @abc.abstractmethod
     def populate_values(self, template: str) -> str:
         ...
 
