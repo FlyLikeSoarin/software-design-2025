@@ -7,7 +7,8 @@ import src.models as models
 
 
 class IOProtocol(abc.ABC):
-    def parse_command() -> bool:
+    @abc.abstractmethod
+    def parse_command(self) -> bool:
         ...
 
 
@@ -30,10 +31,12 @@ class IO(IOProtocol):
         self.defenition_matcher = re.compile(r"(?P<key>[a-zA-Z_]+[a-zA-Z0-9_]*)=(?P<value>[^\s]+)")
 
     def read_command(self) -> str:
-        """ Read command until line does not end with \\"""
+        """Читает строки из stdin, пока строки заканчиваются на \\"""
         command = ""
+        is_first_line = True
         while True:
-            snippet = input().strip()
+            snippet = input("[ terminal ]: " if is_first_line else "").strip()
+            is_first_line = False
             command += snippet
             if snippet.endswith("\\"):
                 command = command[:-1]
@@ -41,12 +44,16 @@ class IO(IOProtocol):
             return command
     
     def tokenize(self, patterns: list[re.Pattern], command) -> list[str]:
+        """
+        Разделяет строку на токены рекурсивно запуская регулярные выражения
+
+        Порядок выражений задаёт приоритет различных конструкций языка при парсинге
+        """
         pattern, *next_patterns = patterns
-        if next_patterns:
-            def recurse(s: str) -> list[str]:
+        def recurse(s: str) -> list[str]:
+            if next_patterns:
                 return self.tokenize(next_patterns, s)
-        else:
-            def recurse(_: str) -> list[str]:
+            else:
                 return []
         tail: str = command
         tokens = []
@@ -63,6 +70,7 @@ class IO(IOProtocol):
         return tokens
 
     def consume_defenitions(self, tokens: list[str]) -> tuple[dict[str, str], list[str]]:
+        """Забрать из начала списка определения"""
         env = {}
         for index, token in enumerate(tokens):
             if m := self.defenition_matcher.match(token):
@@ -73,6 +81,7 @@ class IO(IOProtocol):
         return env, []
             
     def consume_command(self, tokens: list[str]) -> tuple[models.Command, list[str]]:
+        """Забрать из начала списка токенов комманду, потребяет все токены до "|" или до конца строки"""
         if "|" in tokens:
             pos = tokens.index("|")
             tail = tokens[pos+1:]
@@ -85,7 +94,7 @@ class IO(IOProtocol):
 
         while tokens:
             head, *tokens = tokens
-            if m := self.param_pattern.match(head):
+            if (m := self.param_pattern.match(head)) and tokens and not self.param_pattern.match(tokens[0]):
                 key = m.groupdict()["key"]
                 value, *tokens = tokens
                 command.kwargs[key] = value
@@ -96,6 +105,7 @@ class IO(IOProtocol):
 
 
     def populate(self, value: str) -> str:
+        """Применить для конкретного токера подставновки из контекста"""
         if value.startswith(r'"'):
             value = value.strip(r'"')
         elif value.startswith(r"'"):
@@ -104,11 +114,8 @@ class IO(IOProtocol):
 
 
     def parse_command(self) -> bool:
+        """Считывает команду из stdin, парсит её превращая в Command и запускает Executor"""
         raw_command = self.read_command()
-
-        # TODO: Remove this if after merging BUILDINS
-        if raw_command == "exit":
-            return False
     
         tokens = self.tokenize(self.pattern_pipeline, raw_command)
         env, tokens = self.consume_defenitions(tokens)
@@ -122,10 +129,11 @@ class IO(IOProtocol):
         while tokens:
             command, tokens = self.consume_command(tokens)
             command.args = [self.populate(value) for value in command.args]
-            command.kwargs = {key: self.populate(value) for key, value in command.kwargs}
+            command.kwargs = {key: self.populate(value) for key, value in command.kwargs.items()}
             commands.append(command)
         
-        self.executor.execute_pipeline(self.context.get_env(), commands)
+        if commands:
+            self.executor.execute_pipeline(self.context.get_env(), commands)
 
         self.context.exit_scope()
         

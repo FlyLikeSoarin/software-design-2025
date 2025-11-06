@@ -5,6 +5,7 @@ test:
 .PHONY: lint
 lint:
 	PYTHONPATH=. python -m ruff check .
+	PYTHONPATH=. python -m mypy src
 
 .PHONY: run
 run:

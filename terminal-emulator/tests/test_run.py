@@ -8,4 +8,4 @@ def test_exceptions():
         'exit\n'
     ).encode()
     result = subprocess.run(["python", "src/main.py"], input=input, capture_output=True)
-    assert result.stdout.decode().strip().split() == ["1", "1", "18"]
+    assert result.stdout.decode().strip().split() == "[ terminal ]: 1 1 18\n[ terminal ]: Quitting...".strip().split()
