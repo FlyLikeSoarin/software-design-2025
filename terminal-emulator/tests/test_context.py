@@ -45,8 +45,21 @@ def test_exit_scope(ctx):
         ("cat ${x}", "cat 1"),
     ]
 )
-def test_template(ctx, template, expected):
+def test_quote_template(ctx, template, expected):
     ctx.add_unscoped_param('x', '1')
     ctx.add_unscoped_param('y', '2')
 
-    assert ctx.populate_values(template) == expected
+    assert ctx.populate_quote(template) == expected
+
+@pytest.mark.parametrize(
+    'template,expected',
+    [
+        ("$x$y", "12"),
+        ("cat $x", "cat 1"),
+    ]
+)
+def test_naked_template(ctx, template, expected):
+    ctx.add_unscoped_param('x', '1')
+    ctx.add_unscoped_param('y', '2')
+
+    assert ctx.populate_naked(template) == expected
