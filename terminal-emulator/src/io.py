@@ -107,10 +107,12 @@ class IO(IOProtocol):
     def populate(self, value: str) -> str:
         """Применить для конкретного токера подставновки из контекста"""
         if value.startswith(r'"'):
-            value = value.strip(r'"')
+            value = self.context.populate_quote(value.strip(r'"'))
         elif value.startswith(r"'"):
             value = value.strip(r"'")
-        return self.context.populate_values(value)
+        else:
+            value = self.context.populate_naked(value)
+        return value
 
 
     def parse_command(self) -> bool:
