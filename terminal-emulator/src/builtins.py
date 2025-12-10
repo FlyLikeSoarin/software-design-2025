@@ -1,12 +1,14 @@
 import io
 import os
+import re
 
 import src.exceptions as exceptions
 import src.models as models
 
 
 class Builtin:
-    """Класс встроенных команд оболочки (shell)
+    """
+    Класс встроенных команд оболочки (shell)
 
     Содержит статические методы для реализации встроенных команд shell.
     Каждая команда принимает входной и выходной потоки, а также аргументы.
@@ -21,7 +23,8 @@ class Builtin:
 
     @staticmethod
     def cat(in_io: io.TextIOBase, out_io: io.TextIOBase, *args, **kwargs) -> models.ProcessResult:
-        """Читает данные из входного потока или файлов и записывает в выходной поток.
+        """
+        Читает данные из входного потока или файлов и записывает в выходной поток.
 
         Если аргументы не переданы, читает данные из входного потока.
         Если переданы имена файлов, читает и выводит их содержимое.
@@ -43,7 +46,8 @@ class Builtin:
 
     @staticmethod
     def echo(in_io: io.TextIOBase, out_io: io.TextIOBase, *args, **kwargs) -> models.ProcessResult:
-        """Выводит аргументы в выходной поток, разделенные пробелами.
+        """
+        Выводит аргументы в выходной поток, разделенные пробелами.
 
         :param in_io: входной поток (не используется)
         :param out_io: выходной поток для записи результатов
@@ -55,7 +59,8 @@ class Builtin:
 
     @staticmethod
     def wc(in_io: io.TextIOBase, out_io: io.TextIOBase, *args, **kwargs) -> models.ProcessResult:
-        """Подсчитывает строки, слова и байты во входном потоке или файлах.
+        """
+        Подсчитывает строки, слова и байты во входном потоке или файлах.
 
         Если аргументы не переданы, анализирует данные из входного потока.
         Если переданы имена файлов, анализирует каждый файл и выводит общую статистику.
@@ -95,7 +100,8 @@ class Builtin:
 
     @staticmethod
     def pwd(in_io: io.TextIOBase, out_io: io.TextIOBase, *args, **kwargs) -> models.ProcessResult:
-        """Выводит текущую рабочую директорию.
+        """
+        Выводит текущую рабочую директорию.
 
         :param in_io: входной поток (не используется)
         :param out_io: выходной поток для записи текущей директории
@@ -103,6 +109,74 @@ class Builtin:
         """
         out_io.write(os.getcwd() + '\n')
         
+        return models.ProcessResult(0)
+
+    @staticmethod
+    def grep(in_io: io.TextIOBase, out_io: io.TextIOBase, *args, **kwargs) -> models.ProcessResult:
+        """
+        Фильтрует файлы по заданым параметрам.
+        -f FILE  --  файл из которого будем читать, если не указан, то читаем из stdio [--file]
+        -e BOOL  --  интерпретируем PATTERN как regexp [--regexp]
+        -i BOOL  --  игнорировать регистр [--nocase]
+        -c BOOL  --  вывести только кол-во строк [--count]
+        -m INT   --  максимальное кол-во вхождений [--max-count]
+        -A INT   --  строки после вхождения
+        -B INT   --  строки до вхождения
+        -C INT   --  строки до и после вхождения
+        PATTERN  --  паттерн, по которому будут искаться значения [Всегда последний агрумент]
+
+        :param in_io: входной поток (не используется)
+        :param out_io: выходной поток для записи текущей директории
+        :param args: аргументы (игнорируются)
+        """
+
+        lines: list[str]
+        if filename := (kwargs.get("f") or kwargs.get("file")):
+            with open(filename, mode="r") as file:
+                lines = file.readlines()
+        else:
+            lines = in_io.readlines()
+
+        ignore_case = bool(kwargs.get("i") or kwargs.get("nocase"))
+        as_regexp = bool(kwargs.get("e") or kwargs.get("regexp"))
+        pattern: str = args[-1]
+
+        if ignore_case:
+            pattern = pattern.lower()
+
+        matches: list[int] = []
+        for i, line in enumerate(lines):
+            if ignore_case:
+                line = line.lower()
+            if as_regexp:
+                if re.search(pattern, line):
+                    matches.append(i)
+            else:
+                if pattern in line:
+                    matches.append(i)
+        
+        if max_count := (kwargs.get("m") or kwargs.get("max-count")):
+            matches = matches[:max_count]
+
+        if kwargs.get("c") or kwargs.get("count"):
+            out_io.write(str(len(matches)) + "\n")
+            return models.ProcessResult(0)
+
+        matches_set: set[int] = set(matches)
+        if after := max(kwargs.get("A", 0), kwargs.get("C", 0)):
+            for i in matches:
+                for j in range(i, min(len(lines), i + after)):
+                    matches_set.add(j)
+        if before := max(kwargs.get("B", 0), kwargs.get("C", 0)):
+            for i in matches:
+                for j in range(max(0, i - before), i + 1):
+                    matches_set.add(j)
+
+        filtered_lines = list(map(lambda x: x[1], filter(lambda x: x[0] in matches_set, enumerate(lines))))
+
+        out_io.writelines(filtered_lines)
+        out_io.write("\n")
+
         return models.ProcessResult(0)
 
     @staticmethod

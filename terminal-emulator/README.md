@@ -26,3 +26,10 @@ poetry run make test
 
 # Запуск CLI
 poetry run make run <команда>
+```
+
+### Информация
+
+[Правила работы с репозиторием](сontributing.md)
+
+[Aрхитектура проекта](./architecture.md)
