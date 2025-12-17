@@ -163,11 +163,11 @@ class Builtin:
             return models.ProcessResult(0)
 
         matches_set: set[int] = set(matches)
-        if after := max(kwargs.get("A", 0), kwargs.get("C", 0)):
+        if after := max(int(kwargs.get("A", 0)), int(kwargs.get("C", 0))):
             for i in matches:
-                for j in range(i, min(len(lines), i + after)):
+                for j in range(i, min(len(lines), i + after + 1)):
                     matches_set.add(j)
-        if before := max(kwargs.get("B", 0), kwargs.get("C", 0)):
+        if before := max(int(kwargs.get("B", 0)), int(kwargs.get("C", 0))):
             for i in matches:
                 for j in range(max(0, i - before), i + 1):
                     matches_set.add(j)
