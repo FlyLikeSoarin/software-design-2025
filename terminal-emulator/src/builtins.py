@@ -155,8 +155,8 @@ class Builtin:
                 if pattern in line:
                     matches.append(i)
         
-        if max_count := int(kwargs.get("m") or kwargs.get("max-count")):
-            matches = matches[:max_count + 1]
+        if max_count := kwargs.get("m") or kwargs.get("max-count"):
+            matches = matches[:int(max_count)]
 
         if kwargs.get("c") or kwargs.get("count"):
             out_io.write(str(len(matches)) + "\n")

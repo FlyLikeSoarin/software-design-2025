@@ -19,6 +19,14 @@ def test_grep():
         "poetry run make lint [ terminal ]: Quitting..."
     ).strip().split()
 
+    input = b"grep -f README.md -m 1 poetry\nexit"
+    result = subprocess.run(["python", "src/main.py"], input=input, capture_output=True)
+    assert result.stdout.decode().strip().split() == (
+        "[ terminal ]: poetry install --no-root [ terminal ]: Quitting..."
+
+    ).strip().split()
+
+
     input = b"grep -f README.md --count true poetry\nexit"
     result = subprocess.run(["python", "src/main.py"], input=input, capture_output=True)
     assert result.stdout.decode().strip().split() == "[ terminal ]: 4 [ terminal ]: Quitting...".strip().split()
