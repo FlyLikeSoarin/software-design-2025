@@ -1,5 +1,6 @@
 import io
 import os
+import sys
 
 import src.exceptions as exceptions
 import src.models as models
@@ -103,6 +104,62 @@ class Builtin:
         """
         out_io.write(os.getcwd() + '\n')
         
+        return models.ProcessResult(0)
+    
+    @staticmethod
+    def cd(in_io: io.TextIOBase, out_io: io.TextIOBase, *args, **kwargs) -> models.ProcessResult:
+        """Меняет текущую директорию на заданную в аргументе
+
+        :param in_io: входной поток
+        :param out_io: выходной поток (не используется)
+        :param args: аргументы
+        """
+        def go_to_user_home():
+            user_homedir = os.path.expanduser("~")
+            os.chdir(user_homedir)
+        
+        if len(args) == 0:
+            go_to_user_home()
+        elif len(args) == 1:
+            if args[0] == "~":
+                go_to_user_home()
+            else:
+                if not os.path.exists(args[0]):
+                    print(f"cd: {args[0]}: No such file or directory", file=sys.stderr)
+                    return models.ProcessResult(1)
+                os.chdir(args[0])
+        else:
+            print("cd: too many args", file=sys.stderr)
+            return models.ProcessResult(1)
+        
+        return models.ProcessResult(0)
+    
+    @staticmethod
+    def ls(in_io: io.TextIOBase, out_io: io.TextIOBase, *args, **kwargs) -> models.ProcessResult:
+        """Выводит список файлов в директории, если передан файл, выводит его же путь
+
+        :param in_io: входной поток
+        :param out_io: выходной поток
+        :param args: аргументы
+        """
+        ls_path = ""
+        if len(args) == 0:
+            ls_path = "."
+        elif len(args) == 1:
+            ls_path = args[0]
+        else:
+            print("ls: too many args", file=sys.stderr)
+            return models.ProcessResult(1)
+        
+        if not os.path.exists(ls_path):
+            print(f"ls: {ls_path}: No such file or directory", file=sys.stderr)
+            return models.ProcessResult(1)
+        
+        if os.path.isdir(ls_path):
+            out_io.write("\n".join(sorted(os.listdir(ls_path))) + '\n')
+        else:
+            out_io.write(ls_path + '\n')
+
         return models.ProcessResult(0)
 
     @staticmethod
